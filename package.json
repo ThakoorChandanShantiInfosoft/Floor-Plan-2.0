@@ -5,8 +5,8 @@
   "dependencies": {
     "antd": "5.16.0",
     "lodash": "4.17.21",
-    "react": "17.0.0",
-    "react-dom": "17.0.0",
+    "react": "16.8.0",
+    "react-dom": "16.8.0",
     "react-resizable-rotatable-draggable-touch-v2": "2.0.2",
     "react-scripts": "5.0.1",
     "styled-components": "6.1.8",
