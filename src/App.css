@@ -23,6 +23,7 @@ html, body {
   display: flex;
   justify-content: center;
   align-items: center;
+  user-select: none;
 }
 
 .container {
@@ -31,4 +32,12 @@ html, body {
   height: 100%;
   position: relative;
   transition: transform 0.2s;
+  user-select: none;
+}
+
+* {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
