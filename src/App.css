@@ -1,3 +1,4 @@
+/* App.css */
 html, body {
   height: 100%;
   margin: 0;
@@ -6,7 +7,7 @@ html, body {
   align-items: center;
 }
 
-.buttons-container{
+.buttons-container {
   display: flex;
   flex-direction: row;
   gap: 1rem;
@@ -35,9 +36,77 @@ html, body {
   user-select: none;
 }
 
-* {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
+.custom-modal {
+  display: flex;
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+  background-color: #fff;
+  padding: 24px;
+  border-radius: 2px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  width: 50%;
+  max-width: 400px;
+}
+
+.close {
+  color: #ccc;
+  font-size: 24px;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  cursor: pointer;
+}
+
+.close:hover {
+  color: #999;
+}
+
+.modal-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 2px;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.modal-ok-button {
+  padding: 8px 16px;
+  font-size: 14px;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  background-color: #1890ff;
+  color: #fff;
+}
+
+.modal-ok-button:hover {
+  background-color: #40a9ff;
+}
+
+.upload-button,
+.add-button,
+.reset-button {
+  padding: 8px 16px;
+  font-size: 14px;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.upload-button:hover,
+.add-button:hover,
+.reset-button:hover {
+  background-color: #1890ff;
+  color: #fff;
 }

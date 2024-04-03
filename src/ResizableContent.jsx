@@ -1,16 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ResizableRect from 'react-resizable-rotatable-draggable-touch-v2';
 import { DeleteOutlined } from '@ant-design/icons';
 
 const ResizableContent = ({ index, top, left, width, height, rotateAngle, containerWidth, containerHeight, onUpdate, onDelete, name }) => {
+  const [sizeMultiplier, setSizeMultiplier] = useState(1);
 
   const handleResize = (styleSize, isShiftKey, type, event) => {
-    const { top, left, width, height } = styleSize.style;
-    onUpdate(index, { top, left, width, height, rotateAngle });
+    const { width: newWidth, height: newHeight } = styleSize.style;
+    const newMultiplier = Math.min(newWidth / 85, newHeight / 55);
+    const maxMultiplier = 1.5;
+    const limitedMultiplier = Math.min(newMultiplier, maxMultiplier);
+    setSizeMultiplier(limitedMultiplier);
+    onUpdate(index, { ...styleSize.style, rotateAngle });
   };
 
   const handleRotate = (rotateState, event) => {
-    onUpdate(index, { top, left, width, height, rotateAngle: rotateState.rotateAngle });
+    const newRotateAngle = rotateState.rotateAngle;
+    const radians = (rotateState.rotateAngle * Math.PI) / 180;
+    const cosAngle = Math.cos(radians);
+    const sinAngle = Math.sin(radians);
+    const tooltipLeft = left + (width / 2) * (1 - cosAngle) - (height / 2) * sinAngle;
+    const tooltipTop = top + (height / 2) * (1 - cosAngle) + (width / 2) * sinAngle;
+    onUpdate(index, { rotateAngle: newRotateAngle, tooltipTop, tooltipLeft });
   };
 
   const handleDrag = (dragState, event) => {
@@ -20,37 +31,27 @@ const ResizableContent = ({ index, top, left, width, height, rotateAngle, contai
     onUpdate(index, { top: newTop, left: newLeft, width, height, rotateAngle });
   };
 
-
   const tooltipStyle = {
     position: 'absolute',
-    top: top + height / 2 - 10,
-    left: left + width / 2 - 25, 
+    top: top + height / 2 - 10 * sizeMultiplier,
+    left: left + width / 2 - 25 * sizeMultiplier,
     display: 'flex',
-    justifyContent: 'center', 
+    justifyContent: 'center',
     alignItems: 'center',
-    padding: '5px',
+    padding: `${5 * sizeMultiplier}px`,
     backgroundColor: '#F5F5F5',
-    borderRadius: '5px',
+    borderRadius: `${5 * sizeMultiplier}px`,
     zIndex: 3,
-    fontSize: '10px',
+    fontSize: `${10 * sizeMultiplier}px`,
     fontWeight: '650',
+    transform: `rotate(${rotateAngle}deg)`
   };
 
   return (
     <>
-      <div
-        style={{
-          position: 'absolute',
-          top,
-          left,
-          width,
-          height,
-          transform: `rotate(${rotateAngle}deg)`,
-        }}
-      ></div>
       <div style={tooltipStyle}>
-        <div>{name}</div>
-        <DeleteOutlined onClick={() => onDelete(index)} style={{ fontSize: '12px', marginLeft: '5px', color: 'red' }} />
+        <div style={{ fontSize: `${12 * sizeMultiplier}px` }}>{name}</div>
+        <DeleteOutlined onClick={() => onDelete(index)} style={{ fontSize: `${12 * sizeMultiplier}px`, marginLeft: `${5 * sizeMultiplier}px`, color: 'red' }} />
       </div>
       <ResizableRect
         top={top}
