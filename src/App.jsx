@@ -1,5 +1,3 @@
-// App.js
-
 import _isNil from "lodash/isNil";
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import ResizableContent from "./ResizableContent";
@@ -31,6 +29,10 @@ function App() {
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [bedName, setBedName] = useState("");
+  const [isBedNameEmpty, setIsBedNameEmpty] = useState(true);
+
+  const [editingBedIndex, setEditingBedIndex] = useState(null);
+  const [isNameTooLong, setIsNameTooLong] = useState(false);
 
   useEffect(() => {
     localStorage.setItem("beds", JSON.stringify(beds));
@@ -88,19 +90,37 @@ function App() {
   }, [scale]);
 
   const handleAddBed = () => {
+    setEditingBedIndex(null);
+    setBedName("");
+    setIsBedNameEmpty(true);
     setIsModalVisible(true);
   };
 
-  const handleModalOk = () => {
-    setIsModalVisible(false);
-    const parentContainer = containerRef.current;
-    if (parentContainer) {
-      const parentRect = parentContainer.getBoundingClientRect();
-      const centerLeft = (parentRect.width - 150) / 2;
-      const centerTop = (parentRect.height - 50) / 2;
+  const handleEditBed = (index) => {
+    const bedToEdit = beds.find((bed) => bed.index === index);
+    if (bedToEdit) {
+      setBedName(bedToEdit.name);
+      setIsBedNameEmpty(bedToEdit.name.trim() === "");
+      setEditingBedIndex(index);
+      setIsModalVisible(true);
+    }
+  };
 
-      const newIndex =
-        beds.length > 0 ? beds[beds.length - 1].index + 1 : 1;
+  const handleModalOk = () => {
+    if (editingBedIndex !== null) {
+      const updatedBeds = beds.map((bed) =>
+        bed.index === editingBedIndex ? { ...bed, name: bedName } : bed
+      );
+      setBeds(updatedBeds);
+      setEditingBedIndex(null);
+    } else {
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const bedWidth = 150;
+      const bedHeight = 50;
+      const centerLeft = (containerRect.width / scale - bedWidth) / 2;
+      const centerTop = (containerRect.height / scale - bedHeight) / 2;
+
+      const newIndex = beds.length > 0 ? beds[beds.length - 1].index + 1 : 1;
 
       setBeds([
         ...beds,
@@ -108,18 +128,22 @@ function App() {
           index: newIndex,
           top: centerTop,
           left: centerLeft,
-          width: 150,
-          height: 50,
+          width: bedWidth,
+          height: bedHeight,
           rotateAngle: 0,
           name: bedName,
         },
       ]);
     }
+    setIsModalVisible(false);
     setBedName("");
+    setIsBedNameEmpty(true);
   };
 
   const handleModalCancel = () => {
     setIsModalVisible(false);
+    setEditingBedIndex(null);
+    setBedName("");
   };
 
   const handleReset = () => {
@@ -168,6 +192,17 @@ function App() {
     );
   };
 
+  const handleBedNameChange = (e) => {
+    const inputValue = e.target.value;
+    if (inputValue.length <= 10) {
+      setBedName(inputValue);
+      setIsBedNameEmpty(inputValue.trim() === "");
+      setIsNameTooLong(false);
+    } else {
+      setIsNameTooLong(true);
+    }
+  };
+
   const renderBeds = () => {
     return beds.map((bed) => (
       <ResizableContent
@@ -183,73 +218,93 @@ function App() {
         containerHeight={containerSize.height}
         onUpdate={updateBed}
         onDelete={removeBed}
+        onEdit={handleEditBed}
       />
     ));
   };
 
   return (
     <>
-    <div className="buttons-container">
-      <button className="upload-button" type="button" onClick={() => fileInputRef.current.click()}>
-        Upload Image
-      </button>
-      <input
-        type="file"
-        style={{ display: "none" }}
-        onChange={handleImageUpload}
-        ref={fileInputRef}
-      />
-      <button className="add-button" disabled={!imageURL} onClick={handleAddBed}>
-        Add Bed
-      </button>
-      <button className="reset-button" disabled={!imageURL} onClick={handleReset}>
-        Reset
-      </button>
-    </div>
-    <div
-      className="parent-container"
-      ref={containerRef}
-      onMouseUp={handleMouseUp}
-    >
-      {!_isNil(imageURL) ? (
-        <div
-          className="container"
-          style={{
-            transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-            cursor: isDragging ? "grabbing" : "grab",
-          }}
-          onMouseDown={handleMouseDown}
+      <div className="buttons-container">
+        <button
+          className="upload-button"
+          type="button"
+          onClick={() => fileInputRef.current.click()}
         >
-          <img
-            src={imageURL}
-            alt="UploadedImage"
-            style={{ width: "100%", height: "100%", objectFit: "contain" }}
-          />
-          {renderBeds()}
-        </div>
-      ) : (
-        ""
-      )}
-    </div>
-    {isModalVisible && (
-      <div ref={modalRef} className="custom-modal">
-        <div className="modal-content">
-          <span className="close" onClick={handleModalCancel}>
-            &times;
-          </span>
-          <h2>Enter Bed Name</h2>
-          <input
-            className="modal-input"
-            type="text"
-            placeholder="Enter Bed Name"
-            value={bedName}
-            onChange={(e) => setBedName(e.target.value)}
-          />
-          <button className="modal-ok-button" onClick={handleModalOk}>OK</button>
-        </div>
+          Upload Image
+        </button>
+        <input
+          type="file"
+          style={{ display: "none" }}
+          onChange={handleImageUpload}
+          ref={fileInputRef}
+        />
+        <button
+          className="add-button"
+          disabled={!imageURL}
+          onClick={handleAddBed}
+        >
+          Add Bed
+        </button>
+        <button className="reset-button" onClick={handleReset}>
+          Reset
+        </button>
       </div>
-    )}
-  </>
+      <div
+        className="parent-container"
+        ref={containerRef}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+      >
+        {!_isNil(imageURL) && (
+          <div
+            className="container"
+            style={{
+              transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+              cursor: isDragging ? "grabbing" : "grab",
+            }}
+          >
+            <img
+              src={imageURL}
+              alt="Uploaded"
+              style={{ width: "100%", height: "100%", objectFit: "contain" }}
+            />
+            {renderBeds()}
+          </div>
+        )}
+      </div>
+      {isModalVisible && (
+        <div ref={modalRef} className="custom-modal">
+          <div className="modal-content">
+            <span className="close" onClick={handleModalCancel}>
+              &times;
+            </span>
+            <h2>
+              {editingBedIndex != null ? "Edit Bed Name" : "Enter Bed Name"}
+            </h2>
+            <input
+              className={`modal-input ${isNameTooLong ? "input-error" : ""}`}
+              type="text"
+              placeholder="Enter Bed Name"
+              value={bedName}
+              onChange={handleBedNameChange}
+            />
+            {isNameTooLong && (
+              <div className="error-message">
+                Name cannot be more than 10 characters
+              </div>
+            )}
+            <button
+              className={`modal-ok-button ${isBedNameEmpty ? "disabled" : ""}`}
+              onClick={handleModalOk}
+              disabled={isBedNameEmpty}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
