@@ -276,9 +276,7 @@ function App() {
       {isModalVisible && (
         <div ref={modalRef} className="custom-modal">
           <div className="modal-content">
-            <span className="close" onClick={handleModalCancel}>
-              &times;
-            </span>
+          <span className="close" onClick={handleModalCancel}>&times;</span>
             <h2>
               {editingBedIndex != null ? "Edit Bed Name" : "Enter Bed Name"}
             </h2>
