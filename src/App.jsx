@@ -1,36 +1,32 @@
-import _isNil from "lodash/isNil";
 import React, { useRef, useState, useEffect, useCallback } from "react";
+import {
+  Dialog,
+  TextField,
+  Button,
+} from "@material-ui/core";
 import ResizableContent from "./ResizableContent";
 import "./App.css";
 
 function App() {
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
-  const modalRef = useRef(null);
 
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [position, setPosition] = useState(
-    () => JSON.parse(localStorage.getItem("position")) || { x: 0, y: 0 }
-  );
-
+  const [position, setPosition] = useState(() => JSON.parse(localStorage.getItem("position")) || { x: 0, y: 0 });
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
-  const [beds, setBeds] = useState(
-    () => JSON.parse(localStorage.getItem("beds")) || []
-  );
+  const [beds, setBeds] = useState(() => JSON.parse(localStorage.getItem("beds")) || []);
+  const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
+  const [currentBedIndex, setCurrentBedIndex] = useState(null);
+  const [patientDetails, setPatientDetails] = useState({ name: "", age: "", condition: "" });
   const [imageURL, setImageURL] = useState(() => {
     const storedImageURL = localStorage.getItem("imageURL");
     return storedImageURL === "null" ? null : storedImageURL;
   });
-
-  const [scale, setScale] = useState(
-    () => parseFloat(localStorage.getItem("scale")) || 1
-  );
-
+  const [scale, setScale] = useState(() => parseFloat(localStorage.getItem("scale")) || 1);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [bedName, setBedName] = useState("");
   const [isBedNameEmpty, setIsBedNameEmpty] = useState(true);
-
   const [editingBedIndex, setEditingBedIndex] = useState(null);
   const [isNameTooLong, setIsNameTooLong] = useState(false);
 
@@ -74,10 +70,7 @@ function App() {
   useEffect(() => {
     const container = containerRef.current;
     if (container) {
-      setContainerSize({
-        width: container.offsetWidth,
-        height: container.offsetHeight,
-      });
+      setContainerSize({ width: container.offsetWidth, height: container.offsetHeight });
       const handleWheel = (e) => {
         e.preventDefault();
         const scaleAdjustment = e.deltaY * -0.01;
@@ -94,6 +87,22 @@ function App() {
     setBedName("");
     setIsBedNameEmpty(true);
     setIsModalVisible(true);
+  };
+
+  const handleDoubleClick = (index) => {
+    setCurrentBedIndex(index);
+    setIsPatientModalOpen(true);
+    const bed = beds.find((bed) => bed.index === index);
+    setPatientDetails(bed?.patientDetails || { name: "", age: "", condition: "" });
+  };
+
+  const handleSavePatientDetails = () => {
+    const updatedBeds = beds.map((bed) =>
+      bed.index === currentBedIndex ? { ...bed, patientDetails: { ...patientDetails } } : bed
+    );
+    setBeds(updatedBeds);
+    setIsPatientModalOpen(false);
+    localStorage.setItem("beds", JSON.stringify(updatedBeds));
   };
 
   const handleEditBed = (index) => {
@@ -204,59 +213,46 @@ function App() {
   };
 
   const renderBeds = () => {
-    return beds.map((bed) => (
-      <ResizableContent
-        key={bed.index}
-        index={bed.index}
-        name={bed.name}
-        top={bed.top}
-        left={bed.left}
-        width={bed.width}
-        height={bed.height}
-        rotateAngle={bed.rotateAngle}
-        containerWidth={containerSize.width}
-        containerHeight={containerSize.height}
-        onUpdate={updateBed}
-        onDelete={removeBed}
-        onEdit={handleEditBed}
-      />
+    return beds.map((bed, index) => (
+      <div key={bed.index} onDoubleClick={() => handleDoubleClick(bed.index)}>
+        <ResizableContent
+          beds={beds}
+          bed={bed}
+          key={bed.index}
+          index={bed.index}
+          name={bed.name}
+          top={bed.top}
+          left={bed.left}
+          width={bed.width}
+          height={bed.height}
+          rotateAngle={bed.rotateAngle}
+          containerWidth={containerSize.width}
+          containerHeight={containerSize.height}
+          onUpdate={updateBed}
+          onDelete={removeBed}
+          onEdit={handleEditBed}
+          patientDetails={bed.patientDetails}
+        />
+      </div>
     ));
   };
 
   return (
     <>
       <div className="buttons-container">
-        <button
-          className="upload-button"
-          type="button"
-          onClick={() => fileInputRef.current.click()}
-        >
+        <button className="upload-button" type="button" onClick={() => fileInputRef.current.click()}>
           Upload Image
         </button>
-        <input
-          type="file"
-          style={{ display: "none" }}
-          onChange={handleImageUpload}
-          ref={fileInputRef}
-        />
-        <button
-          className="add-button"
-          disabled={!imageURL}
-          onClick={handleAddBed}
-        >
+        <input type="file" style={{ display: "none" }} onChange={handleImageUpload} ref={fileInputRef} />
+        <button className="add-button" disabled={!imageURL} onClick={handleAddBed}>
           Add Bed
         </button>
         <button className="reset-button" onClick={handleReset}>
           Reset
         </button>
       </div>
-      <div
-        className="parent-container"
-        ref={containerRef}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-      >
-        {!_isNil(imageURL) && (
+      <div className="parent-container" ref={containerRef} onMouseDown={handleMouseDown} onMouseUp={handleMouseUp}>
+        {!imageURL ? null : (
           <div
             className="container"
             style={{
@@ -270,16 +266,46 @@ function App() {
               style={{ width: "100%", height: "100%", objectFit: "contain" }}
             />
             {renderBeds()}
+            <Dialog open={isPatientModalOpen} onClose={() => setIsPatientModalOpen(false)}>
+              <div style={{ padding: "20px" }}>
+                <h2>Add Patient</h2>
+                <TextField
+                  label="Name"
+                  value={patientDetails.name}
+                  onChange={(e) => setPatientDetails({ ...patientDetails, name: e.target.value })}
+                  fullWidth
+                />
+                <TextField
+                  label="Age"
+                  value={patientDetails.age}
+                  onChange={(e) => setPatientDetails({ ...patientDetails, age: e.target.value })}
+                  fullWidth
+                />
+                <TextField
+                  label="Condition"
+                  value={patientDetails.condition}
+                  onChange={(e) => setPatientDetails({ ...patientDetails, condition: e.target.value })}
+                  fullWidth
+                />
+                <Button
+                  onClick={handleSavePatientDetails}
+                  disabled={!patientDetails.name || !patientDetails.age || !patientDetails.condition}
+                  color="primary"
+                  variant="contained"
+                  style={{ marginTop: '20px' }}
+                >
+                  Save
+                </Button>
+              </div>
+            </Dialog>
           </div>
         )}
       </div>
       {isModalVisible && (
-        <div ref={modalRef} className="custom-modal">
+        <div className="custom-modal">
           <div className="modal-content">
-          <span className="close" onClick={handleModalCancel}>&times;</span>
-            <h2>
-              {editingBedIndex != null ? "Edit Bed Name" : "Enter Bed Name"}
-            </h2>
+            <span className="close" onClick={handleModalCancel}>&times;</span>
+            <h2>{editingBedIndex !== null ? "Edit Bed Name" : "Enter Bed Name"}</h2>
             <input
               className={`modal-input ${isNameTooLong ? "input-error" : ""}`}
               type="text"
@@ -287,11 +313,7 @@ function App() {
               value={bedName}
               onChange={handleBedNameChange}
             />
-            {isNameTooLong && (
-              <div className="error-message">
-                Name cannot be more than 10 characters
-              </div>
-            )}
+            {isNameTooLong && <div className="error-message">Name cannot be more than 10 characters</div>}
             <button
               className={`modal-ok-button ${isBedNameEmpty ? "disabled" : ""}`}
               onClick={handleModalOk}

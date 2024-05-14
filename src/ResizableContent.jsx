@@ -1,10 +1,12 @@
-// ResizableContent.jsx
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ResizableRect from "react-resizable-rotatable-draggable-touch-v2";
+import { Tooltip } from "@material-ui/core";
 import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
+import InfoIcon from "@material-ui/icons/Info";
 
 const ResizableContent = ({
+  beds,
+  bed,
   index,
   top,
   left,
@@ -15,11 +17,19 @@ const ResizableContent = ({
   containerHeight,
   onUpdate,
   onDelete,
-  name,
   onEdit,
+  name,
+  patientDetails,
 }) => {
-  // Add onEdit prop
   const [sizeMultiplier, setSizeMultiplier] = useState(1);
+  const [startPosition, setStartPosition] = useState({ left, top });
+  const [forceRerender, setForceRerender] = useState(false);
+
+  useEffect(() => {
+    if (forceRerender) {
+      setForceRerender(false);
+    }
+  }, [forceRerender]);
 
   const handleResize = (styleSize, isShiftKey, type, event) => {
     const { width: newWidth, height: newHeight } = styleSize.style;
@@ -31,15 +41,11 @@ const ResizableContent = ({
   };
 
   const handleRotate = (rotateState, event) => {
-    const newRotateAngle = rotateState.rotateAngle;
-    const radians = (rotateState.rotateAngle * Math.PI) / 180;
-    const cosAngle = Math.cos(radians);
-    const sinAngle = Math.sin(radians);
-    const tooltipLeft =
-      left + (width / 2) * (1 - cosAngle) - (height / 2) * sinAngle;
-    const tooltipTop =
-      top + (height / 2) * (1 - cosAngle) + (width / 2) * sinAngle;
-    onUpdate(index, { rotateAngle: newRotateAngle, tooltipTop, tooltipLeft });
+    onUpdate(index, { rotateAngle: rotateState.rotateAngle });
+  };
+
+  const handleDragStart = () => {
+    setStartPosition({ left, top });
   };
 
   const handleDrag = (dragState, event) => {
@@ -52,7 +58,46 @@ const ResizableContent = ({
       Math.max(0, top + deltaY),
       containerHeight - height
     );
-    onUpdate(index, { top: newTop, left: newLeft, width, height, rotateAngle });
+
+    const overlapBed = beds.find((otherBed) => {
+      if (otherBed?.index === index) return false;
+      return (
+        newLeft < otherBed?.left + otherBed?.width &&
+        newLeft + width > otherBed?.left &&
+        newTop < otherBed?.top + otherBed?.height &&
+        newTop + height > otherBed?.top
+      );
+    });
+
+    if (
+      overlapBed &&
+      !overlapBed?.patientDetails?.name &&
+      bed?.patientDetails?.name
+    ) {
+      // Transfer patient details to the overlapped bed
+      onUpdate(overlapBed?.index, {
+        ...overlapBed,
+        patientDetails: bed.patientDetails,
+      });
+      // Clear patient details from the current bed and reset its position
+      onUpdate(index, {
+        ...startPosition,
+        width,
+        height,
+        rotateAngle,
+        patientDetails: { name: "", age: "", condition: "" },
+      });
+      setForceRerender(true); // Force re-render to reset dragging state
+    } else {
+      // No overlapping or conditions not met, just update the current position
+      onUpdate(index, {
+        top: newTop,
+        left: newLeft,
+        width,
+        height,
+        rotateAngle,
+      });
+    }
   };
 
   const tooltipStyle = {
@@ -75,6 +120,7 @@ const ResizableContent = ({
     pointerEvents: "auto",
     fontSize: `${12 * sizeMultiplier}px`,
     marginLeft: `${5 * sizeMultiplier}px`,
+    cursor: "pointer",
   };
 
   return (
@@ -89,8 +135,17 @@ const ResizableContent = ({
           onClick={() => onDelete(index)}
           style={{ ...iconStyle, color: "red" }}
         />
+        {patientDetails && patientDetails.name && (
+          <Tooltip
+            style={{ fontSize: `${12 * sizeMultiplier}px` }}
+            title={`Name: ${patientDetails.name}, Age: ${patientDetails.age}, Condition: ${patientDetails.condition}`}
+          >
+            <InfoIcon style={{ ...iconStyle, color: "blue" }} />
+          </Tooltip>
+        )}
       </div>
       <ResizableRect
+        key={forceRerender}
         top={top}
         left={left}
         width={width}
@@ -99,6 +154,7 @@ const ResizableContent = ({
         onResize={handleResize}
         onRotate={handleRotate}
         onDrag={handleDrag}
+        onDragStart={handleDragStart}
         zoomable="n, w, s, e, nw, ne, se, sw"
       />
     </>
